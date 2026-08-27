@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IELTS Flashcards</title>
+<style>
+  :root {
+    --bg: #f4efe6;
+    --ink: #1c2430;
+    --muted: #5c6673;
+    --card: #fffdf8;
+    --accent: #c45c26;
+    --accent-2: #2c6e6a;
+    --line: #e4d9c8;
+    --shadow: 0 18px 40px rgba(28,36,48,.12);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Pretendard", "Noto Sans KR", "Segoe UI", sans-serif;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, #fbe7d4 0%, transparent 50%),
+      radial-gradient(900px 500px at 100% 0%, #dceeea 0%, transparent 46%),
+      var(--bg);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+  header {
+    padding: 22px 24px 8px;
+    text-align: center;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: .02em;
+    font-weight: 700;
+  }
+  header p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .wrap {
+    width: min(720px, calc(100% - 28px));
+    margin: 0 auto 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+  }
+  .toolbar, .controls {
+    background: rgba(255,253,248,.86);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 12px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; }
+  button, select {
+    font: inherit;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  button.active {
+    background: var(--accent-2);
+    border-color: var(--accent-2);
+    color: #fff;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  .interval {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .interval input[type=range] { width: 130px; accent-color: var(--accent); }
+  .interval b { color: var(--ink); min-width: 2.4em; display: inline-block; }
+  .stage {
+    perspective: 1400px;
+    min-height: 340px;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card {
+    width: 100%;
+    height: min(420px, 58vh);
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform .6s cubic-bezier(.2,.8,.2,1);
+    cursor: pointer;
+  }
+  .card.flipped { transform: rotateY(180deg); }
+  .face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    background: var(--card);
+    border-radius: 28px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 36px 28px;
+    text-align: center;
+  }
+  .back { transform: rotateY(180deg); background: #fff8ef; }
+  .tag {
+    position: absolute;
+    top: 18px;
+    left: 22px;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .side-label {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .en {
+    font-size: clamp(28px, 4.4vw, 42px);
+    font-weight: 750;
+    line-height: 1.25;
+  }
+  .ko {
+    font-size: clamp(24px, 3.8vw, 36px);
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  .ex {
+    margin-top: 18px;
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 34em;
+    line-height: 1.5;
+  }
+  .progress {
+    height: 6px;
+    background: #e9dfd1;
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #e08a4f);
+    width: 0;
+    transition: width .3s ease;
+  }
+  .count {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: -8px;
+  }
+  .hint { text-align: center; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>IELTS Flashcards</h1>
+    <p>앞면 영어 · 뒷면 한국어 · 자동 재생</p>
+  </header>
+  <div class="wrap">
+    <div class="toolbar">
+      <div class="seg" id="filters">
+        <button data-filter="all" class="active">전체</button>
+        <button data-filter="구문">구문</button>
+        <button data-filter="어휘">어휘</button>
+      </div>
+      <div class="interval">
+        <span>간격</span>
+        <input id="seconds" type="range" min="1" max="10" step="0.5" value="3" />
+        <b id="secLabel">3.0초</b>
+        <span>/ 면</span>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="card" id="card">
+        <div class="face front">
+          <div class="tag" id="tagF"></div>
+          <div class="side-label">English</div>
+          <div class="en" id="en"></div>
+        </div>
+        <div class="face back">
+          <div class="tag" id="tagB"></div>
+          <div class="side-label">한국어</div>
+          <div class="ko" id="ko"></div>
+          <div class="ex" id="ex"></div>
+        </div>
+      </div>
+    </div>
+    <div class="progress"><span id="bar"></span></div>
+    <div class="count" id="count"></div>
+    <div class="controls">
+      <div class="seg">
+        <button id="prev">이전</button>
+        <button id="play" class="primary">재생</button>
+        <button id="next">다음</button>
+      </div>
+      <div class="seg">
+        <button id="shuffle">섞기</button>
+        <button id="restart">처음부터</button>
+        <button id="backup">백업</button>
+        <button id="restore">복원</button>
+        <input id="restoreFile" type="file" accept="application/json,.json" hidden />
+      </div>
+    </div>
+    <div class="hint" id="hint">카드를 누르면 뒤집힙니다. 재생 중에는 앞면 → 뒷면 → 다음 카드 순으로 넘어갑니다. 백업은 JSON 파일로 저장되고, 복원으로 다시 불러옵니다.</div>
+  </div>
+<script>
+let ALL = [{"en": "These days", "ko": "요즘", "ex": "These days, more people work from home.", "tag": "구문"}, {"en": "As a result", "ko": "그 결과", "ex": "As a result, traffic in the city centre has decreased.", "tag": "구문"}, {"en": "are expanding", "ko": "확대하고 있다", "ex": "Many universities are expanding scholarships.", "tag": "구문"}, {"en": "become more diverse", "ko": "다양해지다 (various 아님)", "ex": "Campuses are becoming more diverse.", "tag": "구문"}, {"en": "a problem may arise", "ko": "문제가 생길 수 있다", "ex": "A shortage of dormitories may arise.", "tag": "구문"}, {"en": "attract", "ko": "유치하다 (promote는 홍보하다)", "ex": "Cities are expanding events to attract tourists.", "tag": "구문"}, {"en": "foster creativity", "ko": "창의력을 키우다", "ex": "Arts classes can foster creativity.", "tag": "구문"}, {"en": "rise", "ko": "(가격·부담이) 오르다", "ex": "Housing costs may rise.", "tag": "구문"}, {"en": "arise", "ko": "(문제가) 생기다", "ex": "A budget problem may arise.", "tag": "구문"}, {"en": "quality of life", "ko": "삶의 질", "ex": "Parks can improve quality of life in cities.", "tag": "구문"}, {"en": "disposable items", "ko": "일회용품", "ex": "Many shops still rely on disposable items.", "tag": "구문"}, {"en": "This is because they believe", "ko": "그 이유는 그들이 ~라고 생각하기 때문이다", "ex": "This is because they believe it saves time.", "tag": "구문"}, {"en": "some warn that", "ko": "일부는 ~라고 경고한다", "ex": "Some warn that the costs could increase.", "tag": "구문"}, {"en": "people are concerned that", "ko": "사람들은 ~를 우려한다", "ex": "People are concerned that housing costs may rise.", "tag": "구문"}, {"en": "there are concerns that", "ko": "~에 대한 우려가 있다", "ex": "There are concerns that operating costs could increase.", "tag": "구문"}, {"en": "make an effort", "ko": "노력하다", "ex": "Students should make an effort to review every day.", "tag": "구문"}, {"en": "telemedicine", "ko": "원격 진료", "ex": "Many hospitals are expanding telemedicine.", "tag": "구문"}, {"en": "carbon emissions", "ko": "탄소 배출", "ex": "Public transport can reduce carbon emissions.", "tag": "구문"}, {"en": "public transport", "ko": "대중교통 (불가산)", "ex": "Many governments are expanding public transport.", "tag": "구문"}, {"en": "eco-friendly packaging", "ko": "친환경 포장", "ex": "Companies are expanding eco-friendly packaging.", "tag": "구문"}, {"en": "copyright", "ko": "저작권", "ex": "A copyright problem may arise.", "tag": "구문"}, {"en": "night-time opening hours", "ko": "야간 개장", "ex": "Museums are expanding night-time opening hours.", "tag": "구문"}, {"en": "the cost of living", "ko": "생활비", "ex": "These days, the cost of living in big cities is much higher than in small ones.", "tag": "어휘"}, {"en": "a growing number of", "ko": "점점 더 많은 수의", "ex": "A growing number of young people prefer to work from home.", "tag": "어휘"}, {"en": "in the long run", "ko": "장기적으로는", "ex": "Living in a small city may mean fewer job options, but in the long run it can improve quality of life.", "tag": "어휘"}, {"en": "a financial burden", "ko": "재정적 부담", "ex": "Free university education could become a financial burden on taxpayers.", "tag": "어휘"}, {"en": "play a vital role", "ko": "중요한 역할을 하다", "ex": "Regular exercise plays a vital role in preventing heart disease.", "tag": "어휘"}, {"en": "take into account", "ko": "고려하다, 감안하다", "ex": "When choosing a job, people should take into account salary and working hours.", "tag": "어휘"}, {"en": "a lack of", "ko": "~의 부족", "ex": "There is a lack of affordable housing in many big cities.", "tag": "어휘"}, {"en": "a double-edged sword", "ko": "양날의 검, 장단점이 있는 것", "ex": "Social media is a double-edged sword: it connects people, but it can also spread false information.", "tag": "어휘"}, {"en": "it is widely believed that", "ko": "~라고 널리 믿어지다", "ex": "It is widely believed that children learn languages more easily than adults.", "tag": "어휘"}, {"en": "compared with", "ko": "~와 비교하면", "ex": "Compared with running, walking is easier on the knees.", "tag": "어휘"}, {"en": "rely on", "ko": "~에 의존하다", "ex": "People in rural areas often rely on cars because public transport is limited.", "tag": "어휘"}, {"en": "on a daily basis", "ko": "매일, 일상적으로", "ex": "Reading a little English on a daily basis is more effective than studying once a week.", "tag": "어휘"}, {"en": "lead to", "ko": "~을 초래하다, ~로 이어지다", "ex": "Eating too much sugar can lead to health problems later in life.", "tag": "어휘"}, {"en": "according to research", "ko": "연구에 따르면", "ex": "According to research, people sleep better if they avoid screens before bed.", "tag": "어휘"}, {"en": "be likely to", "ko": "~할 가능성이 있다", "ex": "Students who review notes the same day are more likely to remember them.", "tag": "어휘"}, {"en": "impulse buying", "ko": "충동구매", "ex": "Impulse buying is more common when people are tired or in a hurry.", "tag": "어휘"}, {"en": "point out", "ko": "지적하다, 지적해서 말하다", "ex": "Teachers often point out that sleep is as important as study.", "tag": "어휘"}, {"en": "prejudice", "ko": "편견", "ex": "Prejudice against older workers is still common in some industries.", "tag": "어휘"}, {"en": "a wide range of", "ko": "다양한 범위의", "ex": "This course covers a wide range of topics, from history to science.", "tag": "어휘"}, {"en": "for instance", "ko": "예를 들어", "ex": "Some foods, for instance nuts and fish, are good for the brain.", "tag": "어휘"}, {"en": "tend to", "ko": "~하는 경향이 있다", "ex": "People tend to eat more when they are watching TV.", "tag": "어휘"}, {"en": "in contrast", "ko": "대조적으로", "ex": "In contrast to sugar, protein helps you feel full for longer.", "tag": "어휘"}, {"en": "have a significant impact on", "ko": "~에 큰 영향을 미치다", "ex": "Regular sleep can have a significant impact on memory.", "tag": "어휘"}, {"en": "in addition", "ko": "게다가, 추가로", "ex": "In addition to English, she is studying French.", "tag": "어휘"}, {"en": "on the other hand", "ko": "반면에", "ex": "Some people love winter. On the other hand, many prefer a warmer climate.", "tag": "어휘"}, {"en": "the vast majority of", "ko": "대다수의", "ex": "The vast majority of students use a laptop in class.", "tag": "어휘"}, {"en": "as well as", "ko": "~뿐만 아니라", "ex": "Vitamin C is found in oranges as well as in strawberries.", "tag": "어휘"}, {"en": "a key factor", "ko": "핵심 요인, 중요한 요소", "ex": "Motivation is a key factor in learning a new language.", "tag": "어휘"}, {"en": "in the short term", "ko": "단기적으로는", "ex": "Cutting calories can help in the short term, but lasting change needs new habits.", "tag": "어휘"}, {"en": "pay attention to", "ko": "~에 주의를 기울이다", "ex": "Students should pay attention to the teacher during class.", "tag": "어휘"}, {"en": "it is worth -ing", "ko": "~할 가치가 있다", "ex": "It is worth checking your essay before you submit it.", "tag": "어휘"}, {"en": "a growing concern", "ko": "점점 커지는 우려", "ex": "Obesity has become a growing concern in many countries.", "tag": "어휘"}, {"en": "to some extent", "ko": "어느 정도는", "ex": "I agree with that idea to some extent, but there are exceptions.", "tag": "어휘"}, {"en": "from my point of view", "ko": "내 생각에는", "ex": "From my point of view, cooking at home is healthier than eating out.", "tag": "어휘"}, {"en": "when it comes to", "ko": "~에 관해서는", "ex": "When it comes to sleep, quality matters as much as hours.", "tag": "어휘"}, {"en": "a major advantage of", "ko": "~의 큰 장점", "ex": "A major advantage of online courses is that students can study at their own pace.", "tag": "어휘"}, {"en": "it is often argued that", "ko": "~라고 자주 주장된다", "ex": "It is often argued that homework is necessary for young children.", "tag": "어휘"}, {"en": "a drawback of", "ko": "~의 단점", "ex": "A drawback of living alone is that it can feel lonely.", "tag": "어휘"}, {"en": "make a difference", "ko": "차이를 만들다, 도움이 되다", "ex": "Small daily habits can make a difference over time.", "tag": "어휘"}, {"en": "take advantage of", "ko": "~을 잘 활용하다", "ex": "Students should take advantage of free library resources.", "tag": "어휘"}, {"en": "there is no doubt that", "ko": "~라는 것은 분명하다", "ex": "There is no doubt that reading improves vocabulary.", "tag": "어휘"}, {"en": "be aware of", "ko": "~을 알고 있다, 인식하다", "ex": "People should be aware of the risks of too much screen time.", "tag": "어휘"}, {"en": "provided that", "ko": "~하는 한, ~라면", "ex": "You can borrow the book provided that you return it on time.", "tag": "어휘"}, {"en": "a common belief", "ko": "흔한 믿음, 일반적인 생각", "ex": "It is a common belief that breakfast is the most important meal of the day.", "tag": "어휘"}, {"en": "in other words", "ko": "다시 말해", "ex": "The test was postponed. In other words, you have more time to prepare.", "tag": "어휘"}, {"en": "keep in mind", "ko": "명심하다, 기억해 두다", "ex": "Keep in mind that IELTS Writing needs a clear opinion.", "tag": "어휘"}, {"en": "regardless of", "ko": "~에 상관없이", "ex": "Everyone should have access to healthcare, regardless of income.", "tag": "어휘"}, {"en": "a growing trend", "ko": "증가하는 추세", "ex": "Remote learning has become a growing trend in higher education.", "tag": "어휘"}, {"en": "in terms of", "ko": "~의 관점에서", "ex": "In terms of cost, cooking at home is cheaper than eating out.", "tag": "어휘"}, {"en": "as far as I am concerned", "ko": "내가 보기에, 내 생각에는", "ex": "As far as I am concerned, public libraries should stay free.", "tag": "어휘"}, {"en": "have no choice but to", "ko": "~할 수밖에 없다", "ex": "Many people have no choice but to work overtime during busy seasons.", "tag": "어휘"}, {"en": "it is essential to", "ko": "~하는 것이 필수적이다", "ex": "It is essential to drink enough water in hot weather.", "tag": "어휘"}, {"en": "put emphasis on", "ko": "~을 강조하다", "ex": "Many schools put too much emphasis on test scores.", "tag": "어휘"}, {"en": "the extent to which", "ko": "어느 정도까지", "ex": "The extent to which screens affect sleep is still debated.", "tag": "어휘"}, {"en": "a sense of belonging", "ko": "소속감", "ex": "Clubs help students develop a sense of belonging at school.", "tag": "어휘"}, {"en": "in the near future", "ko": "가까운 미래에", "ex": "Many office jobs may change in the near future because of AI.", "tag": "어휘"}, {"en": "in spite of", "ko": "~에도 불구하고", "ex": "In spite of the rain, the match continued.", "tag": "어휘"}, {"en": "pose a threat to", "ko": "~에 위협이 되다", "ex": "Air pollution can pose a threat to children's health.", "tag": "어휘"}, {"en": "at the expense of", "ko": "~을 희생하여", "ex": "Some people chase high salaries at the expense of their health.", "tag": "어휘"}, {"en": "bring about", "ko": "~을 가져오다, 초래하다", "ex": "New technology can bring about big changes in education.", "tag": "어휘"}, {"en": "take for granted", "ko": "당연하게 여기다", "ex": "Many people take clean water for granted until it is gone.", "tag": "어휘"}, {"en": "a heated debate", "ko": "뜨거운 논쟁", "ex": "There is a heated debate about whether homework helps children.", "tag": "어휘"}, {"en": "be in favour of", "ko": "~을 찬성하다", "ex": "Many parents are in favour of later school start times.", "tag": "어휘"}, {"en": "come to the conclusion that", "ko": "~라는 결론에 이르다", "ex": "After the study, they came to the conclusion that sleep matters more than extra study.", "tag": "어휘"}, {"en": "have mixed views on", "ko": "~에 대해 의견이 갈리다", "ex": "People have mixed views on whether children should have smartphones.", "tag": "어휘"}, {"en": "a stepping stone", "ko": "발판, 디딤돌", "ex": "An internship can be a stepping stone to a full-time job.", "tag": "어휘"}, {"en": "bear in mind", "ko": "명심하다, 염두에 두다", "ex": "Bear in mind that practice is more useful than long study sessions.", "tag": "어휘"}, {"en": "fall behind", "ko": "뒤처지다", "ex": "Students who miss class often fall behind in their work.", "tag": "어휘"}, {"en": "catch up with", "ko": "따라잡다", "ex": "If you miss a week of class, it is hard to catch up with the others.", "tag": "어휘"}, {"en": "a vicious cycle", "ko": "악순환", "ex": "Skipping breakfast and then overeating later can become a vicious cycle.", "tag": "어휘"}, {"en": "get used to", "ko": "~에 익숙해지다", "ex": "It can take months to get used to a new country.", "tag": "어휘"}, {"en": "make up for", "ko": "만회하다, 보충하다", "ex": "She studied on the weekend to make up for lost time.", "tag": "어휘"}, {"en": "put off", "ko": "미루다", "ex": "Many students put off writing their essays until the night before.", "tag": "어휘"}, {"en": "a turning point", "ko": "전환점", "ex": "Moving abroad was a turning point in her life.", "tag": "어휘"}, {"en": "work-life balance", "ko": "일과 삶의 균형", "ex": "A healthy work-life balance can reduce stress.", "tag": "어휘"}, {"en": "burnout", "ko": "번아웃, 소진", "ex": "Too much overtime can lead to burnout.", "tag": "어휘"}, {"en": "peer pressure", "ko": "또래 압력, 또래 압박", "ex": "Teenagers often start smoking because of peer pressure.", "tag": "어휘"}, {"en": "hands-on experience", "ko": "실무 경험, 직접 해보는 경험", "ex": "Internships give students hands-on experience in a real workplace.", "tag": "어휘"}, {"en": "lifelong learning", "ko": "평생 학습", "ex": "In a fast-changing job market, lifelong learning is becoming essential.", "tag": "어휘"}, {"en": "digital literacy", "ko": "디지털 리터러시, 디지털 활용 능력", "ex": "Digital literacy is now as important as reading and writing.", "tag": "어휘"}, {"en": "critical thinking", "ko": "비판적 사고", "ex": "Schools should teach critical thinking, not only facts.", "tag": "어휘"}, {"en": "an ageing population", "ko": "고령화 인구", "ex": "An ageing population puts pressure on healthcare systems.", "tag": "어휘"}, {"en": "a sedentary lifestyle", "ko": "좌식 생활, 움직임이 적은 생활", "ex": "A sedentary lifestyle can increase the risk of heart disease.", "tag": "어휘"}, {"en": "wind down", "ko": "긴장을 풀다, 하루를 마무리하다", "ex": "I usually wind down by listening to music after work.", "tag": "어휘"}, {"en": "a balanced diet", "ko": "균형 잡힌 식단", "ex": "A balanced diet includes vegetables, protein, and some healthy fats.", "tag": "어휘"}, {"en": "the risk of -ing", "ko": "~할 위험", "ex": "Eating late at night increases the risk of gaining weight.", "tag": "어휘"}, {"en": "remote work", "ko": "재택근무, 원격 근무", "ex": "Remote work has become common since the pandemic.", "tag": "어휘"}, {"en": "commuting time", "ko": "출퇴근 시간", "ex": "Living near the office can cut commuting time.", "tag": "어휘"}, {"en": "urbanisation", "ko": "도시화", "ex": "Rapid urbanisation can create housing shortages in big cities.", "tag": "어휘"}, {"en": "problem-solving skills", "ko": "문제 해결 능력", "ex": "Schools should teach problem-solving skills, not only facts.", "tag": "어휘"}, {"en": "operating costs", "ko": "운영비", "ex": "Longer opening hours can raise a library's operating costs.", "tag": "어휘"}, {"en": "stay open later", "ko": "더 늦게까지 문을 열다", "ex": "If cafés stay open later, students have more places to study.", "tag": "어휘"}, {"en": "a shortage of", "ko": "~의 부족", "ex": "There is a shortage of nurses in many hospitals.", "tag": "어휘"}, {"en": "it is expected that", "ko": "~할 것으로 기대된다", "ex": "It is expected that more students will study abroad next year.", "tag": "어휘"}, {"en": "air pollution", "ko": "대기 오염", "ex": "Air pollution is a serious problem in many industrial cities.", "tag": "어휘"}, {"en": "charging stations", "ko": "충전소", "ex": "Cities need more charging stations as electric cars become popular.", "tag": "어휘"}, {"en": "electric cars", "ko": "전기차", "ex": "Electric cars produce less noise than petrol cars.", "tag": "어휘"}, {"en": "a traditional job", "ko": "전통적인 직장, 정규 직장", "ex": "Some people prefer a traditional job because it feels more stable.", "tag": "어휘"}, {"en": "side income", "ko": "부수입", "ex": "Many freelancers earn side income from online courses.", "tag": "어휘"}, {"en": "renewable energy", "ko": "재생 에너지", "ex": "Many countries are investing more in renewable energy.", "tag": "어휘"}, {"en": "food waste", "ko": "음식물 쓰레기", "ex": "Reducing food waste is an easy way to help the environment.", "tag": "어휘"}, {"en": "mental health awareness", "ko": "정신 건강에 대한 인식", "ex": "Mental health awareness has improved a lot among young people.", "tag": "어휘"}, {"en": "professional sports", "ko": "프로 스포츠", "ex": "Professional sports attract huge audiences around the world.", "tag": "어휘"}, {"en": "reusable cups", "ko": "다회용 컵", "ex": "More cafés now offer discounts for reusable cups.", "tag": "어휘"}, {"en": "personal information", "ko": "개인정보", "ex": "Hospitals must protect patients' personal information carefully.", "tag": "어휘"}, {"en": "medical diagnosis", "ko": "의료 진단", "ex": "AI can support doctors in making a medical diagnosis.", "tag": "어휘"}, {"en": "data leakage", "ko": "데이터 유출, 정보 유출", "ex": "Companies must prevent data leakage after a cyber attack.", "tag": "어휘"}, {"en": "artificial intelligence", "ko": "인공지능", "ex": "Artificial intelligence is changing the way people work and study.", "tag": "어휘"}, {"en": "relieve stress", "ko": "스트레스를 풀다, 완화하다", "ex": "A short walk after lunch can help relieve stress.", "tag": "어휘"}, {"en": "disrupt sleep", "ko": "수면을 방해하다", "ex": "Screens before bed can disrupt sleep.", "tag": "어휘"}, {"en": "caffeinated drinks", "ko": "카페인 음료", "ex": "Students often rely on caffeinated drinks during exam week.", "tag": "어휘"}, {"en": "second-hand clothes", "ko": "중고 옷", "ex": "Buying second-hand clothes is cheaper and better for the planet.", "tag": "어휘"}, {"en": "tuition fees", "ko": "등록금", "ex": "Many students take part-time jobs to cover tuition fees.", "tag": "어휘"}, {"en": "traffic congestion", "ko": "교통 체증", "ex": "Rush-hour traffic congestion wastes a lot of time.", "tag": "어휘"}, {"en": "deadline", "ko": "마감일", "ex": "Many students leave essays until the deadline.", "tag": "어휘"}, {"en": "household chores", "ko": "집안일", "ex": "Sharing household chores can reduce stress at home.", "tag": "어휘"}, {"en": "hand in", "ko": "제출하다", "ex": "Students must hand in their essays before Friday.", "tag": "어휘"}, {"en": "commute", "ko": "출퇴근하다", "ex": "A long commute can leave people exhausted after work.", "tag": "어휘"}, {"en": "catch up on", "ko": "밀린 것을 따라잡다", "ex": "She used the weekend to catch up on sleep.", "tag": "어휘"}, {"en": "skip a meal", "ko": "끼니를 거르다", "ex": "Busy students often skip a meal during exam week.", "tag": "어휘"}, {"en": "cut down on", "ko": "줄이다", "ex": "He is trying to cut down on sugar.", "tag": "어휘"}, {"en": "keep track of", "ko": "계속 파악하다", "ex": "It helps to keep track of daily spending.", "tag": "어휘"}, {"en": "brush up on", "ko": "복습하다, 다시 익히다", "ex": "She wants to brush up on her English before the exam.", "tag": "어휘"}, {"en": "look forward to", "ko": "기대하다", "ex": "I look forward to meeting my classmates again.", "tag": "어휘"}, {"en": "come up with", "ko": "생각해 내다", "ex": "She came up with a simple plan for the weekend.", "tag": "어휘"}];
+let deck = ALL.slice();
+let i = 0;
+let playing = false;
+let timer = null;
+let filter = "all";
+
+const $ = (id) => document.getElementById(id);
+const cardEl = $("card");
+
+function applyFilter() {
+  deck = ALL.filter(c => filter === "all" || c.tag === filter);
+  i = 0;
+  render(false);
+}
+
+function render(flipped) {
+  if (!deck.length) return;
+  const c = deck[i];
+  $("en").textContent = c.en;
+  $("ko").textContent = c.ko;
+  $("ex").textContent = c.ex || "";
+  $("tagF").textContent = c.tag;
+  $("tagB").textContent = c.tag;
+  cardEl.classList.toggle("flipped", !!flipped);
+  $("count").textContent = (i + 1) + " / " + deck.length;
+  $("bar").style.width = ((i + 1) / deck.length * 100) + "%";
+}
+
+function intervalMs() {
+  return Number($("seconds").value) * 1000;
+}
+
+function stopPlay() {
+  playing = false;
+  clearTimeout(timer);
+  $("play").textContent = "재생";
+}
+
+function tick() {
+  if (!playing) return;
+  const flipped = cardEl.classList.contains("flipped");
+  if (!flipped) {
+    cardEl.classList.add("flipped");
+    timer = setTimeout(tick, intervalMs());
+  } else {
+    i = (i + 1) % deck.length;
+    render(false);
+    timer = setTimeout(tick, intervalMs());
+  }
+}
+
+function startPlay() {
+  playing = true;
+  $("play").textContent = "일시정지";
+  clearTimeout(timer);
+  timer = setTimeout(tick, intervalMs());
+}
+
+$("play").onclick = () => playing ? stopPlay() : startPlay();
+$("next").onclick = () => { i = (i + 1) % deck.length; render(false); };
+$("prev").onclick = () => { i = (i - 1 + deck.length) % deck.length; render(false); };
+$("restart").onclick = () => { i = 0; render(false); };
+$("shuffle").onclick = () => {
+  for (let n = deck.length - 1; n > 0; n--) {
+    const j = Math.floor(Math.random() * (n + 1));
+    [deck[n], deck[j]] = [deck[j], deck[n]];
+  }
+  i = 0;
+  render(false);
+};
+cardEl.onclick = () => cardEl.classList.toggle("flipped");
+$("seconds").oninput = () => {
+  $("secLabel").textContent = Number($("seconds").value).toFixed(1) + "초";
+};
+document.querySelectorAll("#filters button").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll("#filters button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    filter = btn.dataset.filter;
+    applyFilter();
+  };
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === " ") { e.preventDefault(); playing ? stopPlay() : startPlay(); }
+  if (e.key === "ArrowRight") $("next").click();
+  if (e.key === "ArrowLeft") $("prev").click();
+  if (e.key === "Enter") cardEl.classList.toggle("flipped");
+});
+
+function setHint(msg) {
+  $("hint").textContent = msg;
+}
+
+function backupPayload() {
+  return {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    interval: Number($("seconds").value),
+    filter,
+    index: i,
+    cards: ALL
+  };
+}
+
+function downloadJson(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+$("backup").onclick = () => {
+  const stamp = new Date().toISOString().slice(0, 10);
+  downloadJson(backupPayload(), "ielts-flashcards-backup-" + stamp + ".json");
+  setHint("JSON 백업 파일을 저장했습니다.");
+};
+
+function normalizeCards(raw) {
+  if (!Array.isArray(raw) || !raw.length) throw new Error("empty");
+  return raw.map((c) => {
+    const en = (c.en || c.english || c.front || "").trim();
+    const ko = (c.ko || c.korean || c.back || "").trim();
+    if (!en || !ko) throw new Error("bad card");
+    return {
+      en,
+      ko,
+      ex: (c.ex || c.example || "").trim(),
+      tag: c.tag || "어휘"
+    };
+  });
+}
+
+function applyBackup(data) {
+  let cards, savedFilter = "all", savedIndex = 0, savedInterval;
+  if (Array.isArray(data)) {
+    cards = normalizeCards(data);
+  } else if (data && Array.isArray(data.cards)) {
+    cards = normalizeCards(data.cards);
+    savedFilter = data.filter || "all";
+    savedIndex = Number(data.index) || 0;
+    savedInterval = data.interval;
+  } else {
+    throw new Error("format");
+  }
+  ALL = cards;
+  filter = savedFilter;
+  document.querySelectorAll("#filters button").forEach((b) => {
+    b.classList.toggle("active", b.dataset.filter === filter);
+  });
+  if (savedInterval) {
+    $("seconds").value = savedInterval;
+    $("secLabel").textContent = Number(savedInterval).toFixed(1) + "초";
+  }
+  applyFilter();
+  if (deck.length) i = Math.min(Math.max(savedIndex, 0), deck.length - 1);
+  render(false);
+  setHint(ALL.length + "장을 JSON에서 복원했습니다.");
+}
+
+$("restore").onclick = () => $("restoreFile").click();
+$("restoreFile").onchange = (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      applyBackup(JSON.parse(reader.result));
+    } catch (err) {
+      setHint("복원에 실패했습니다. JSON 파일 형식을 확인해 주세요.");
+    }
+  };
+  reader.readAsText(file, "utf-8");
+};
+
+applyFilter();
+</script>
+</body>
+</html>
